@@ -34,3 +34,6 @@ These do not work on our systems. Each binary program requires some fixing, whic
 * merge_parts_gpu
 * split_parts_gpu
 * xfibres_gpu
+
+## Installation
+Simply copy these to your FSL bin directory and overwrite the files.
