@@ -198,7 +198,7 @@ opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery -
 defopts="--cnonlinear"
 opts="$opts $defopts $other"
 
-Check for Slurm
+#Check for Slurm
 echo "Locating CUDA queue."
 if [ -n "$FSLGECUDAQ" ] && [ "$nocuda" -eq 0 ]; then
   sinfo --hide --partition=$FSLGECUDAQ 2>&1 >/dev/null
@@ -208,7 +208,9 @@ if [ -n "$FSLGECUDAQ" ] && [ "$nocuda" -eq 0 ]; then
       echo "Currently GPU options are not available."
       echo "Continuing with bedpostx."
 			# exec $0_gpu $myopts
-		fi
+    else
+      exec $0_gpu $myopts
+    fi
 	fi
 fi
 

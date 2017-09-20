@@ -137,6 +137,7 @@ model=2
 gflag=0
 other=""
 queue=""
+slurm=0
 
 if [ $qsys -eq 0 ] && [ "x$SGE_ROOT" != "x" ]; then
 	queue="-q $FSLGECUDAQ"
@@ -164,6 +165,15 @@ opts="--nf=$nfibres --fudge=$fudge --bi=$burnin --nj=$njumps --se=$sampleevery -
 defopts="--cnonlinear"
 opts="$opts $defopts $other"
 
+#Check for Slurm
+echo "Locating CUDA queue."
+if [ -n "$FSLGECUDAQ" ]; then
+  sinfo --hide --partition=$FSLGECUDAQ 2>&1 >/dev/null
+	if [ $? -eq 0 ]; then
+      slurm=1
+	fi
+fi
+
 #check that all required files exist
 
 if [ ! -d $subjdir ]; then
@@ -172,21 +182,21 @@ if [ ! -d $subjdir ]; then
 fi
 
 if [ ! -e ${subjdir}/bvecs ]; then
-    if [ -e ${subjdir}/bvecs.txt ]; then
-	mv ${subjdir}/bvecs.txt ${subjdir}/bvecs
-    else
-	echo "${subjdir}/bvecs not found"
-	exit 1
-    fi
+  if [ "$(ls ${subjdir}/*bvec* | wc -l)" -ge "1" ]; then
+    mv ${subjdir}/*bvec* ${subjdir}/bvecs
+  else
+    echo "${subjdir}/bvecs not found"
+    exit 1
+  fi
 fi
 
 if [ ! -e ${subjdir}/bvals ]; then
-    if [ -e ${subjdir}/bvals.txt ]; then
-	mv ${subjdir}/bvals.txt ${subjdir}/bvals
-    else
-	echo "${subjdir}/bvals not found"
-	exit 1
-    fi
+  if [ "$(ls ${subjdir}/*bval* | wc -l)" -ge "1" ]; then
+    mv ${subjdir}/*bval* ${subjdir}/bvals
+  else
+    echo "${subjdir}/bvals not found"
+    exit 1
+  fi
 fi
 
 if [ `${FSLDIR}/bin/imtest ${subjdir}/data` -eq 0 ]; then
@@ -241,9 +251,12 @@ if [ ${gflag} -eq 1 ]; then
 else
 	pre_command="$FSLDIR/bin/split_parts_gpu ${subjdir}/data ${subjdir}/nodif_brain_mask ${subjdir}.bedpostX/bvals ${subjdir}.bedpostX/bvecs NULL 0 $njobs ${subjdir}.bedpostX"
 fi
-if [ $qsys -eq 0 ]; then
+if [ $qsys -eq 0 ] && [ $slurm -eq 0]; then
 	#SGE
 	splitID=`${FSLDIR}/bin/fsl_sub -T 40 -l ${subjdir}.bedpostX/logs -N bedpostx_preproc_gpu $pre_command`
+elif [ $qsys -eq 0 ] && [ $slurm -eq 1 ]; then
+  #SLURM
+  splitID=`${FSLDIR}/bin/fsl_sub -F -T 40 -l ${subjdir}.bedpostX/logs -N bedpostx_preproc_gpu $pre_command | grep -oP "Submitted batch job\s+\K\w+"`
 else
 	#TORQUE
 	echo $pre_command > ${subjdir}.bedpostX/temp
@@ -281,9 +294,12 @@ do
     	part=$(($part + 1))
 done
 
-if [ $qsys -eq 0 ]; then
+if [ $qsys -eq 0 ] && [ $slurm -eq 0]; then
 	#SGE
 	bedpostid=`${FSLDIR}/bin/fsl_sub $queue -l ${subjdir}.bedpostX/logs -N bedpostx_gpu -j $splitID -t ${subjdir}.bedpostX/commands.txt`
+elif [ $qsys -eq 0 ] && [ $slurm -eq 1 ]; then
+  #SLURM
+  bedpostid=`${FSLDIR}/bin/fsl_sub $queue -l ${subjdir}.bedpostX/logs -N bedpostx_gpu -j $splitID -t ${subjdir}.bedpostX/commands.txt | grep -oP "Submitted batch job\s+\K\w+"`
 else
 	#TORQUE
 	taskfile=${subjdir}.bedpostX/commands.txt
@@ -300,9 +316,12 @@ fi
 
 echo Queuing post processing stage
 post_command="${FSLDIR}/bin/bedpostx_postproc_gpu.sh --data=${subjdir}/data --mask=$subjdir.bedpostX/nodif_brain_mask -b ${subjdir}.bedpostX/bvals -r ${subjdir}.bedpostX/bvecs  --forcedir --logdir=$subjdir.bedpostX/diff_parts $gopts $nvox $njobs ${subjdir} ${FSLDIR}"
-if [ $qsys -eq 0 ]; then
+if [ $qsys -eq 0 ] && [ $slurm -eq 0]; then
 	#SGE
 	mergeid=`${FSLDIR}/bin/fsl_sub -T 120 -j $bedpostid -N bedpostx_postproc_gpu -l ${subjdir}.bedpostX/logs $post_command`
+elif [ $qsys -eq 0 ] && [ $slurm -eq 1 ]; then
+  #SLURM
+  mergeid=`${FSLDIR}/bin/fsl_sub -T 120 -j $bedpostid -N bedpostx_postproc_gpu -l ${subjdir}.bedpostX/logs $post_command | grep -oP "Submitted batch job\s+\K\w+"`
 else
 	#TORQUE
 	echo $post_command > ${subjdir}.bedpostX/temp
@@ -327,6 +346,23 @@ EOC
     echo
     echo You will get an email at the end of the post-processing stage.
     echo
+
+elif [ "x$FSLPARALLEL" != "x" ] && [ $slurm -eq 1 ]; then
+        echo
+        echo Type ${subjdir}.bedpostX/monitor to show progress.
+        echo Type ${subjdir}.bedpostX/cancel to terminate all the queued tasks.
+        cat <<EOC > ${subjdir}.bedpostX/cancel
+#!/bin/sh
+scancel $mergeid
+scancel $bedpostid
+scancel $preprocid
+EOC
+        chmod +x ${subjdir}.bedpostX/cancel
+
+        echo
+        echo You will get an email at the end of the post-processing stage.
+        echo
+
 else
     sleep 60
 fi
