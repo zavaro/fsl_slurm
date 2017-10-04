@@ -96,13 +96,13 @@ do_reg(){
 
     for g in `$FSLDIR/bin/imglob *_FA.*` ; do
 
-	o=${g}_to_$f
+	     o=${g}_to_$f
 
-	if [ ! -f ${o}_warp.msf ] ; then
-	    echo $o
-	    touch ${o}_warp.msf
-	    echo "$FSLDIR/bin/fsl_reg $g $f ${g}_to_$f -e -FA" >> .commands
-	fi
+	      if [ ! -f ${o}_warp.msf ] ; then
+	         echo $o
+	          touch ${o}_warp.msf
+	          echo "$FSLDIR/bin/fsl_reg $g $f ${g}_to_$f -e -FA" >> .commands
+	      fi
 
     done
 }
@@ -116,26 +116,24 @@ echo [`date`] [`hostname`] [`uname -a`] [`pwd`] [$0 $@] >> .tbsslog
 if [ $1 = -n ] ; then
     cd FA
     for f in `$FSLDIR/bin/imglob *_FA.*` ; do
-	do_reg $f
+	     do_reg $f
     done
 else
     if [ $1 = -T ] ; then
-	TARGET=$FSLDIR/data/standard/FMRIB58_FA_1mm
+	     TARGET=$FSLDIR/data/standard/FMRIB58_FA_1mm
     elif [ $1 = -t ] ; then
-	TARGET=$2
+	     TARGET=$2
     else
-	Usage
+	     Usage
     fi
     if [ `${FSLDIR}/bin/imtest $TARGET` = 0 ] ; then
-	echo ""
-	echo "Error: target image $TARGET not valid"
-	Usage
+	     echo ""
+	     echo "Error: target image $TARGET not valid"
+	     Usage
     fi
     $FSLDIR/bin/imcp $TARGET FA/target
     cd FA
     do_reg target
 fi
 
-WORKINGDIR=`pwd`
-
-${FSLDIR}/bin/fsl_sub -l $WORKINGDIR/tbss_logs -T 60 -N tbss_2_reg -t .commands
+${FSLDIR}/bin/fsl_sub -T 60 -N tbss_2_reg -t .commands
