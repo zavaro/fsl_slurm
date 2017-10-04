@@ -136,6 +136,6 @@ else
     do_reg target
 fi
 
-$WORKINGDIR=`pwd`
+WORKINGDIR=`pwd`
 
 ${FSLDIR}/bin/fsl_sub -l $WORKINGDIR/tbss_logs -T 60 -N tbss_2_reg -t .commands
