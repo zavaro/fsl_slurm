@@ -102,7 +102,12 @@ do_reg(){
 	         echo $o
 	          touch ${o}_warp.msf
 	          echo "$FSLDIR/bin/fsl_reg $g $f ${g}_to_$f -e -FA" >> .commands
-	      fi
+        else
+            echo $o
+             rm ${o}_warp.msf
+             touch ${o}_warp.msf
+             echo "$FSLDIR/bin/fsl_reg $g $f ${g}_to_$f -e -FA" >> .commands
+        fi
 
     done
 }
