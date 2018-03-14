@@ -224,7 +224,7 @@ if [ ! -d $subjdir ]; then
 fi
 
 if [ ! -e ${subjdir}/bvecs ]; then
-  if [ "$(ls ${subjdir}/*bvec* | wc -l)" -ge "1" ]; then
+  if [ "$(ls ${subjdir}/*bvec* | wc -l)" -ge "1" ]; then ## Rework section for BIDs
     mv ${subjdir}/*bvec* ${subjdir}/bvecs
   else
     echo "${subjdir}/bvecs not found"
@@ -233,7 +233,7 @@ if [ ! -e ${subjdir}/bvecs ]; then
 fi
 
 if [ ! -e ${subjdir}/bvals ]; then
-  if [ "$(ls ${subjdir}/*bval* | wc -l)" -ge "1" ]; then
+  if [ "$(ls ${subjdir}/*bval* | wc -l)" -ge "1" ]; then ## Rework section for BIDs
     mv ${subjdir}/*bval* ${subjdir}/bvals
   else
     echo "${subjdir}/bvals not found"
